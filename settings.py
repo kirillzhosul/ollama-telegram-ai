@@ -1,5 +1,5 @@
 # Telegram
-TELEGRAM_TOKEN = "7118186973:AAH1poa-5kLj8CtHlBAzQ-KP17FBc72FNDk"
+TELEGRAM_TOKEN = ""
 
 # Model
 START_USER_MESSAGE = "Hello, my name is {0}, I am here to ask you some questions or just speak like a friends"
