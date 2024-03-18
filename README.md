@@ -6,14 +6,22 @@
 Contains Telegram bot that interacts with the Ollama API LLM models to answer user messages
 
 ### Features
-- Translations for base languages (to endpoint `en` language`
+- Translations for base languages (to endpoint `en` language, can be disabled)
 - Chat system with clearing and etc
+- Regenerating completion (dislike button)
+- WIP: Change model
 
 ### How to run
 - Install [Ollama](https://ollama.com/)
 - Edit config (mostly for Telegram token)
+- Install requirements
 - run `main.py`
+- [Optional] [Search for models](https://ollama.com/search)
+
+### TODO:
+- Images context
+
 
 ### Tests
 
-Tested with llama2
+Tested with llama2 / some other ollama LLMs
