@@ -8,10 +8,11 @@ SYSTEM_MESSAGE = """You are a bot
 """
 
 
-BASE_LANGUAGE = "ru"
+BASE_LANGUAGE = "en"
 
 # Ollama
 OLLAMA_API_HOST = "http://localhost:11434"
-OLLAMA_MODEL = "deepseek-coder:latest"
+OLLAMA_MODEL = "llama2:13b-chat"
+OLLAMA_MODEL_TEMPERATURE = 1
 # TODO: OLLAMA_INSTALL_MISSING_MODELS
 # TODO: OLLAMA_KEEP_ALIVE

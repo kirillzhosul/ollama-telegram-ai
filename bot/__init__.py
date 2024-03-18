@@ -7,7 +7,7 @@ async def main() -> None:
     from bot.bot import dp
     from bot.routers import completion, start
 
-    if not model_is_installed(OLLAMA_MODEL):
+    if not await model_is_installed(OLLAMA_MODEL):
         print(f"[FATAL] Model {OLLAMA_MODEL} is not installed")
         exit(1)
     dp.include_routers(start.router, completion.router)

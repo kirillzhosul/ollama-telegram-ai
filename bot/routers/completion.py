@@ -7,7 +7,13 @@ from bot.keyboards.inline import answer_keyboard
 from bot.keyboards.reply import base_keyboard
 from bot.ollama import OllamaChat, OllamaChatMessage, generate_chat_completion
 from bot.ollama.api import get_installed_models, model_is_installed
-from bot.settings import BASE_LANGUAGE, OLLAMA_MODEL, START_USER_MESSAGE, SYSTEM_MESSAGE
+from bot.settings import (
+    BASE_LANGUAGE,
+    OLLAMA_MODEL,
+    OLLAMA_MODEL_TEMPERATURE,
+    START_USER_MESSAGE,
+    SYSTEM_MESSAGE,
+)
 from bot.translator import translate
 
 router = Router()
@@ -34,7 +40,7 @@ async def generate(message: Message, user_id: int, text: str):
         return _delete_chat(user_id)
     if text == "/models":
         await message.answer(
-            "\n".join([model.name for model in get_installed_models()])
+            "\n".join([model.name for model in await get_installed_models()])
         )
         return
     if _create_chat(user_id):
@@ -48,11 +54,12 @@ async def generate(message: Message, user_id: int, text: str):
         chats[user_id].do_translate = False
         return
     try:
-        await aiogram_bot.edit_message_reply_markup(
-            user_id,
-            message_id=chat.linked_last_messages,
-            reply_markup=None,
-        )
+        if chat.linked_last_messages:
+            await aiogram_bot.edit_message_reply_markup(
+                user_id,
+                message_id=chat.linked_last_messages,
+                reply_markup=None,
+            )
     except Exception:
         print("error on clear")
 
@@ -60,7 +67,7 @@ async def generate(message: Message, user_id: int, text: str):
 
     if text.startswith("/set_model"):
         model_to_set = "".join(text.split()[1:])
-        if not model_is_installed(model_to_set):
+        if not await model_is_installed(model_to_set):
             await message.answer(f"Model {model_to_set} does not exists!")
             return
         await message.answer(f"Model was set to {model_to_set}!")
@@ -78,10 +85,12 @@ async def generate(message: Message, user_id: int, text: str):
     print(f"[{user_id}]: {prompt}")
 
     assistant_content = ""
-    for is_done, chunk in generate_chat_completion(
+    async for is_done, chunk in generate_chat_completion(
         chat.ollama_chat.messages,
         OLLAMA_MODEL,
+        ollama_options={"temperature": OLLAMA_MODEL_TEMPERATURE},
     ):
+        print(is_done)
         if is_done:
             wrapped_response = wrap(assistant_content, 4096)
             initial_content = wrapped_response.pop(0)

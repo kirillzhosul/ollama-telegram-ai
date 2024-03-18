@@ -2,14 +2,16 @@
     API wrapper around ollama
 
     TODO: Plain (non-chat) implementation
-    TODO: Async HTTP
+    TODO: Full Async HTTP
 """
 
+import time
+from functools import lru_cache
 from json import loads
 from logging import getLogger
-from typing import Any, Final, Generator
+from typing import Any, AsyncGenerator, Final
 
-from requests import Response, get, post
+import aiohttp
 
 from bot.settings import OLLAMA_API_HOST
 
@@ -23,81 +25,75 @@ from .dto import (
 logger = getLogger("ollama.api")
 
 
-def get_installed_models() -> list[OllamaModelTag]:
-    return [
-        OllamaModelTag.model_validate(tag)
-        for tag in (
-            get(f"{OLLAMA_API_HOST}/api/tags", allow_redirects=False)
-            .json()
-            .get("models", [])
-        )
-    ]
+def get_ttl_hash(seconds: int = 3600) -> int:
+    """Return the same value withing `seconds` time period"""
+    return round(time.time() / seconds)
 
 
-def model_is_installed(model_id: str) -> bool:
-    for model in get_installed_models():
+@lru_cache()
+async def get_installed_models(*, cache_ttl: int | None = None) -> list[OllamaModelTag]:
+    del cache_ttl
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{OLLAMA_API_HOST}/api/tags") as response:
+            return [
+                OllamaModelTag.model_validate(tag)
+                for tag in ((await response.json()).get("models", []))
+            ]
+
+
+async def model_is_installed(model_id: str) -> bool:
+    for model in await get_installed_models(cache_ttl=get_ttl_hash):
         if model.name in (model_id, f"{model_id}:latest"):
             return True
     return False
 
 
-def request_chat_completion(
-    messages: list[OllamaChatMessage],
-    model: str,
-    stream: bool = True,
-    **ollama_options: Any,
-) -> Response:
-    """
-    Returns streaming response that does generates response from the model
-    """
-    ollama_params = {
-        "model": model,
-        "messages": [message.model_dump() for message in messages],
-        "stream": stream,
-        "options": ollama_options,
-    }
-    logger.debug(f"Requesting chat completion with {model=}, {stream=}...")
-    return post(
-        f"{OLLAMA_API_HOST}/api/chat",
-        json=ollama_params,
-        stream=stream,
-        allow_redirects=False,
-        timeout=None,
-    )
-
-
-def generate_raw_chat_completion(
+async def generate_raw_chat_completion(
     messages: list[OllamaChatMessage],
     model: str,
     **ollama_options: Any,
-) -> Generator[dict[str, Any], Any, None]:
+) -> AsyncGenerator[dict[str, Any], Any]:
     """
     Generates chunked chat response and returns it as-is (raw)
     """
     RESPONSE_SEGMENT_ENCODING: Final[str] = "utf-8"
 
-    for segment in request_chat_completion(
-        messages, model, **ollama_options, stream=True
-    ).iter_lines():
-        if not segment:
-            continue
+    ollama_params = {
+        "model": model,
+        "messages": [message.model_dump() for message in messages],
+        "stream": True,
+        "options": ollama_options,
+    }
+    logger.debug(f"Requesting chat completion with {model=}...")
 
-        raw_segment: dict[str, Any] = loads(segment.decode(RESPONSE_SEGMENT_ENCODING))
-        if "done" not in raw_segment:
-            continue
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{OLLAMA_API_HOST}/api/chat", json=ollama_params
+        ) as response:
+            async for segment in response.content:
+                if not segment:
+                    continue
 
-        yield raw_segment
+                raw_segment = segment.decode(RESPONSE_SEGMENT_ENCODING)
+                if raw_segment.strip():
+                    raw_segment = loads(raw_segment)
+                    if "done" not in raw_segment:
+                        continue
+
+                    yield raw_segment
 
 
-def generate_chat_completion(
+async def generate_chat_completion(
     messages: list[OllamaChatMessage],
     model: str,
     **ollama_options: Any,
-) -> Generator[tuple[bool, OllamaCompletionResponseChunk], Any, None]:
+) -> AsyncGenerator[tuple[bool, OllamaCompletionResponseChunk], Any]:
     """
     Generates chunked chat response
     """
-    for raw_segment in generate_raw_chat_completion(messages, model, **ollama_options):
+    async for raw_segment in generate_raw_chat_completion(
+        messages, model, **ollama_options
+    ):
         segment_dto = OllamaCompletionResponseChunk
         if is_done := raw_segment.get("done", False):
             segment_dto = OllamaCompletionFinalChunk

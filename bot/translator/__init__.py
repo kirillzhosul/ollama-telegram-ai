@@ -1,4 +1,4 @@
-import requests
+import aiohttp
 
 API_URL = "https://ftapi.pythonanywhere.com/translate?sl={0}&dl={1}&text={2}"
 
@@ -15,6 +15,8 @@ async def translate(
     """
     if skip_same_languages and source_language == destination_language:
         return text
-    return requests.get(
-        API_URL.format(source_language, destination_language, text)
-    ).json()["destination-text"]
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            API_URL.format(source_language, destination_language, text)
+        ) as response:
+            return (await response.json()).get("destination-text", text)
