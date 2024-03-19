@@ -7,6 +7,7 @@ from bot.keyboards.inline import answer_keyboard
 from bot.keyboards.reply import base_keyboard
 from bot.ollama import OllamaChat, OllamaChatMessage, generate_chat_completion
 from bot.ollama.api import get_installed_models, model_is_installed
+from bot.ollama.dto import OllamaErrorChunk
 from bot.settings import (
     BASE_LANGUAGE,
     OLLAMA_MODEL,
@@ -88,9 +89,8 @@ async def generate(message: Message, user_id: int, text: str):
     async for is_done, chunk in generate_chat_completion(
         chat.ollama_chat.messages,
         OLLAMA_MODEL,
-        ollama_options={"temperature": OLLAMA_MODEL_TEMPERATURE},
+        temperature=OLLAMA_MODEL_TEMPERATURE,
     ):
-        print(is_done)
         if is_done:
             wrapped_response = wrap(assistant_content, 4096)
             initial_content = wrapped_response.pop(0)
@@ -119,6 +119,9 @@ async def generate(message: Message, user_id: int, text: str):
                         )
             print(f"[{user_id}]: Finished!")
         else:
+            if isinstance(chunk, OllamaErrorChunk):
+                await message.answer(f"error: {chunk.error}")
+                break
             assistant_content += chunk.message.content
     chat.linked_last_messages = msg.message_id
 
@@ -139,13 +142,16 @@ def _create_chat(user_id: int) -> bool:
 
     chats[user_id] = UserChat(
         selected_model=OLLAMA_MODEL,
-        ollama_chat=OllamaChat(
-            messages=[
-                OllamaChatMessage(role="user", content=SYSTEM_MESSAGE),
-                OllamaChatMessage(role="user", content=START_USER_MESSAGE),
-            ],
-        ),
+        ollama_chat=OllamaChat(messages=[]),
     )
+    if SYSTEM_MESSAGE:
+        chats[user_id].ollama_chat.messages.append(
+            OllamaChatMessage(role="system", content=SYSTEM_MESSAGE)
+        )
+    if START_USER_MESSAGE:
+        chats[user_id].ollama_chat.messages.append(
+            OllamaChatMessage(role="user", content=START_USER_MESSAGE)
+        )
     return True
 
 

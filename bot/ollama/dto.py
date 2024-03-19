@@ -24,6 +24,10 @@ class OllamaCompletionResponseChunk(BaseModel):
     message: OllamaChatMessage
 
 
+class OllamaErrorChunk(BaseModel):
+    error: str
+
+
 class OllamaCompletionFinalChunk(OllamaCompletionResponseChunk):
     context: list[str] | None = None
     total_duration: int

@@ -13,12 +13,13 @@ from typing import Any, AsyncGenerator, Final
 
 import aiohttp
 
-from bot.settings import OLLAMA_API_HOST
+from bot.settings import OLLAMA_API_HOST, OLLAMA_KEEP_ALIVE
 
 from .dto import (
     OllamaChatMessage,
     OllamaCompletionFinalChunk,
     OllamaCompletionResponseChunk,
+    OllamaErrorChunk,
     OllamaModelTag,
 )
 
@@ -63,6 +64,7 @@ async def generate_raw_chat_completion(
         "messages": [message.model_dump() for message in messages],
         "stream": True,
         "options": ollama_options,
+        "keep_alive": OLLAMA_KEEP_ALIVE,
     }
     logger.debug(f"Requesting chat completion with {model=}...")
 
@@ -77,9 +79,6 @@ async def generate_raw_chat_completion(
                 raw_segment = segment.decode(RESPONSE_SEGMENT_ENCODING)
                 if raw_segment.strip():
                     raw_segment = loads(raw_segment)
-                    if "done" not in raw_segment:
-                        continue
-
                     yield raw_segment
 
 
@@ -87,13 +86,15 @@ async def generate_chat_completion(
     messages: list[OllamaChatMessage],
     model: str,
     **ollama_options: Any,
-) -> AsyncGenerator[tuple[bool, OllamaCompletionResponseChunk], Any]:
+) -> AsyncGenerator[tuple[bool, OllamaCompletionResponseChunk | OllamaErrorChunk], Any]:
     """
     Generates chunked chat response
     """
     async for raw_segment in generate_raw_chat_completion(
         messages, model, **ollama_options
     ):
+        if "error" in raw_segment:
+            yield False, OllamaErrorChunk(error=raw_segment["error"])
         segment_dto = OllamaCompletionResponseChunk
         if is_done := raw_segment.get("done", False):
             segment_dto = OllamaCompletionFinalChunk
