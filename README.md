@@ -11,6 +11,9 @@ Contains Telegram bot that interacts with the Ollama API LLM models to answer us
 - Regenerating completion (dislike button)
 - WIP: Change model
 
+### Helping videos
+- Russian: https://www.youtube.com/watch?v=CS4zcNKnczI&t=151s
+
 ### How to run
 - Install [Ollama](https://ollama.com/)
 - Edit config (mostly for Telegram token)
@@ -21,6 +24,8 @@ Contains Telegram bot that interacts with the Ollama API LLM models to answer us
 ### TODO:
 - Images context
 
+### Special thanks
+- [@RuslanPeresy](https://github.com/RuslanPeresy) for promoting this project
 
 ### Tests
 
