@@ -9,9 +9,10 @@ import time
 from functools import lru_cache
 from json import loads
 from logging import getLogger
-from typing import Any, AsyncGenerator, Final
+from typing import Any, AsyncGenerator, Final, Optional
 
 import aiohttp
+import aiohttp.client_exceptions
 
 from bot.settings import OLLAMA_API_HOST, OLLAMA_KEEP_ALIVE
 
@@ -47,6 +48,14 @@ async def model_is_installed(model_id: str) -> bool:
         if model.name in (model_id, f"{model_id}:latest"):
             return True
     return False
+
+
+async def ollama_is_healthy() -> bool:
+    try:
+        await get_installed_models()
+    except aiohttp.client_exceptions.ClientError:
+        return False
+    return True
 
 
 async def generate_raw_chat_completion(
@@ -99,3 +108,23 @@ async def generate_chat_completion(
         if is_done := raw_segment.get("done", False):
             segment_dto = OllamaCompletionFinalChunk
         yield is_done, segment_dto.model_validate(raw_segment)
+
+
+async def validate_installation_with_configuration(
+    required_model_id: Optional[str] = None,
+):
+    if not await ollama_is_healthy():
+        print("[FATAL] Ollama seems not be healthy, is it up and running?")
+        exit(1)
+
+    if required_model_id is None:
+        return
+
+    if not await model_is_installed(required_model_id):
+        print(f"[FATAL] Model {required_model_id} is not installed")
+        installed_models = await get_installed_models()
+        if not installed_models:
+            print(
+                "[WARNING]: Seems like no models installed, you should install any model and configure bot to use it!"
+            )
+        exit(1)
