@@ -1,8 +1,8 @@
 """
-    API wrapper around ollama
+API wrapper around ollama
 
-    TODO: Plain (non-chat) implementation
-    TODO: Full Async HTTP
+TODO: Plain (non-chat) implementation
+TODO: Full Async HTTP
 """
 
 import time
@@ -59,7 +59,7 @@ async def generate_raw_chat_completion(
     """
     RESPONSE_SEGMENT_ENCODING: Final[str] = "utf-8"
 
-    ollama_params = {
+    ollama_params: dict[str, Any] = {
         "model": model,
         "messages": [message.model_dump() for message in messages],
         "stream": True,

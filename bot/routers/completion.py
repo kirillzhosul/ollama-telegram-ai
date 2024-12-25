@@ -57,7 +57,7 @@ async def generate(message: Message, user_id: int, text: str):
     try:
         if chat.linked_last_messages:
             await aiogram_bot.edit_message_reply_markup(
-                user_id,
+                chat_id=user_id,
                 message_id=chat.linked_last_messages,
                 reply_markup=None,
             )
@@ -167,7 +167,7 @@ async def like(callback: CallbackQuery):
     chat = chats[user_id]
     if chat.linked_last_messages:
         await aiogram_bot.edit_message_reply_markup(
-            user_id,
+            chat_id=user_id,
             message_id=chat.linked_last_messages,
             reply_markup=None,
         )
