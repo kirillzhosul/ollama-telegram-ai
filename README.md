@@ -16,8 +16,8 @@ Contains Telegram bot that interacts with the Ollama API LLM models to answer us
 
 ### How to run
 - Install [Ollama](https://ollama.com/)
-- Edit config (mostly for Telegram token)
-- Install requirements
+- Edit config (`./bot/settings.py`)
+- Install requirements (`poetry`)
 - run `main.py`
 - [Optional] [Search for models](https://ollama.com/search)
 

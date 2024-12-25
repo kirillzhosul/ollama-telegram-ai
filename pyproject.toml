@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "ollama-telegram-ai"
+version = "0.1.0"
+description = "Telegram bot that interacts with the local Ollama 🦙 to answer user messages"
+authors = ["Kirill Zhosul <kirillzhosul@yandex.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+aiogram = "^3.16.0"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.8.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
